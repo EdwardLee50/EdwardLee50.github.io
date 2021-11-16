@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/EdwardLee50/EdwardLee50.github.io/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/EdwardLee50/EdwardLee50.github.io/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/EdwardLee50/EdwardLee50.github.io/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/EdwardLee50/EdwardLee50.github.io/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/EdwardLee50/EdwardLee50.github.io/css/main.css">
+
+
+<link rel="stylesheet" href="/EdwardLee50/EdwardLee50.github.io/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"github.com","root":"/EdwardLee50/EdwardLee50.github.io/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Immutability模式：如何利用不变性解决并发问题？解决并发问题，其实最简单的办法就是让共享变量只有读操作，而没有写操作。这个办法如此重要，以至于被上升到了一种解决并发问题的设计模式：不变性（Immutability）模式。所谓不变性，简单来讲，就是对象一旦被创建之后，状态就不再发生变化。换句话说，就是变量一旦被赋值，就不允许修改了（没有写操作）；没有修改操作，也就是保持了不变性。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java并发摘要笔记（三）">
+<meta property="og:url" content="https://github.com/EdwardLee50/EdwardLee50.github.io/2020/04/16/Java%E5%B9%B6%E5%8F%91%EF%BC%88%E4%B8%89%EF%BC%89/index.html">
+<meta property="og:site_name" content="EdwardLee50&#39;s Blog">
+<meta property="og:description" content="Immutability模式：如何利用不变性解决并发问题？解决并发问题，其实最简单的办法就是让共享变量只有读操作，而没有写操作。这个办法如此重要，以至于被上升到了一种解决并发问题的设计模式：不变性（Immutability）模式。所谓不变性，简单来讲，就是对象一旦被创建之后，状态就不再发生变化。换句话说，就是变量一旦被赋值，就不允许修改了（没有写操作）；没有修改操作，也就是保持了不变性。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/EdwardLee50/images/master/https://github.com/EdwardLee50/images/image-20211111101201049.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/EdwardLee50/images/master/https://github.com/EdwardLee50/images/image-20211111102139902.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/EdwardLee50/images/master/https://github.com/EdwardLee50/images/image-20211113144657087.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/EdwardLee50/images/master/https://github.com/EdwardLee50/images/image-20211113160945993.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/EdwardLee50/images/master/https://github.com/EdwardLee50/images/image-20211113162320435.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/EdwardLee50/images/master/https://github.com/EdwardLee50/images/image-20211113230854344.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/EdwardLee50/images/master/https://github.com/EdwardLee50/images/image-20211113162037131.png">
+<meta property="article:published_time" content="2020-04-16T02:08:03.247Z">
+<meta property="article:modified_time" content="2020-04-27T02:13:29.273Z">
+<meta property="article:author" content="EdwardLee50">
+<meta property="article:tag" content="java,并发">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/EdwardLee50/images/master/https://github.com/EdwardLee50/images/image-20211111101201049.png">
+
+<link rel="canonical" href="https://github.com/EdwardLee50/EdwardLee50.github.io/2020/04/16/Java%E5%B9%B6%E5%8F%91%EF%BC%88%E4%B8%89%EF%BC%89/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Java并发摘要笔记（三） | EdwardLee50's Blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/EdwardLee50/EdwardLee50.github.io/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">EdwardLee50's Blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/EdwardLee50/EdwardLee50.github.io/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/EdwardLee50/EdwardLee50.github.io/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/EdwardLee50/EdwardLee50.github.io/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/EdwardLee50/EdwardLee50.github.io/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://github.com/EdwardLee50/EdwardLee50.github.io/2020/04/16/Java%E5%B9%B6%E5%8F%91%EF%BC%88%E4%B8%89%EF%BC%89/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/EdwardLee50/EdwardLee50.github.io/images/avatar.png">
+      <meta itemprop="name" content="EdwardLee50">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="EdwardLee50's Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Java并发摘要笔记（三）
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+
+              
+
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-04-16 10:08:03" itemprop="dateCreated datePublished" datetime="2020-04-16T10:08:03+08:00">2020-04-16</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-04-27 10:13:29" itemprop="dateModified" datetime="2020-04-27T10:13:29+08:00">2020-04-27</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/EdwardLee50/EdwardLee50.github.io/categories/java/" itemprop="url" rel="index"><span itemprop="name">java</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/EdwardLee50/EdwardLee50.github.io/categories/java/%E5%B9%B6%E5%8F%91/" itemprop="url" rel="index"><span itemprop="name">并发</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="Immutability模式：如何利用不变性解决并发问题？"><a href="#Immutability模式：如何利用不变性解决并发问题？" class="headerlink" title="Immutability模式：如何利用不变性解决并发问题？"></a>Immutability模式：如何利用不变性解决并发问题？</h1><p>解决并发问题，其实最简单的办法就是让共享变量只有读操作，而没有写操作。这个办法如此重要，以至于被上升到了一种解决并发问题的设计模式：<strong>不变性（Immutability）模式</strong>。所谓<strong>不变性，简单来讲，就是对象一旦被创建之后，状态就不再发生变化</strong>。换句话说，就是变量一旦被赋值，就不允许修改了（没有写操作）；没有修改操作，也就是保持了不变性。</p>
+<span id="more"></span>
+
+<h2 id="快速实现具备不可变性的类"><a href="#快速实现具备不可变性的类" class="headerlink" title="快速实现具备不可变性的类"></a>快速实现具备不可变性的类</h2><p><strong>将一个类所有的属性都设置成 final 的，并且只允许存在只读方法，那么这个类基本上就具备不可变性了</strong>。更严格的做法是<strong>这个类本身也是 final 的</strong>，也就是不允许继承。</p>
+<p>Java SDK 里很多类都具备不可变性，只是由于它们的使用太简单，最后反而被忽略了。例如经常用到的 String 和 Long、Integer、Double 等基础类型的包装类都具备不可变性，这些对象的线程安全性都是靠不可变性来保证的。它们都严格遵守不可变类的三点要求：<strong>类和属性都是 final 的，所有方法均是只读的</strong>。</p>
+<h2 id="利用享元模式避免创建重复对象"><a href="#利用享元模式避免创建重复对象" class="headerlink" title="利用享元模式避免创建重复对象"></a>利用享元模式避免创建重复对象</h2><p><strong>利用享元模式可以减少创建对象的数量，从而减少内存占用。</strong>Java 语言里面 Long、Integer、Short、Byte 等这些基本数据类型的包装类都用到了享元模式。</p>
+<p>享元模式本质上其实就是一个<strong>对象池</strong>。</p>
+<p>利用享元模式创建对象的逻辑：</p>
+<ol>
+<li>创建之前，首先去对象池里看看是不是存在；</li>
+<li>如果已经存在，就利用对象池里的对象；</li>
+<li>如果不存在，就会新创建一个对象，并且把这个新创建出来的对象放进对象池里。</li>
+</ol>
+<p>Long 这个类并没有照搬享元模式，Long 内部维护了一个静态的对象池，仅缓存了 [-128,127] 之间的数字，这个对象池在 JVM 启动的时候就创建好了，而且这个对象池一直都不会变化，也就是说它是静态的。之所以采用这样的设计，是因为 Long 这个对象的状态共有 264 种，实在太多，不宜全部缓存，而 [-128,127] 之间的数字利用率最高。</p>
+<p>基本上所有的基础类型的包装类都不适合做锁，因为它们内部用到了享元模式，这会导致看上去私有的锁，其实是共有的。</p>
+<h2 id="使用-Immutability-模式的注意事项"><a href="#使用-Immutability-模式的注意事项" class="headerlink" title="使用 Immutability 模式的注意事项"></a>使用 Immutability 模式的注意事项</h2><p>在使用 Immutability 模式的时候，需要注意以下两点：</p>
+<ol>
+<li>对象的所有属性都是 final 的，并不能保证不可变性；</li>
+<li>不可变对象也需要正确发布。</li>
+</ol>
+<p><strong>在使用 Immutability 模式的时候一定要确认保持不变性的边界在哪里，是否要求属性对象也具备不可变性</strong>。</p>
+<p>具备不变性的对象，只有一种状态，这个状态由对象内部所有的不变属性共同决定。其实还有一种更简单的不变性对象，那就是<strong>无状态</strong>。无状态对象内部没有属性，只有方法。在多线程领域，无状态对象没有线程安全问题，无需同步处理，自然性能很好；在分布式领域，无状态意味着可以无限地水平扩展，所以分布式领域里面性能的瓶颈一定不是出在无状态的服务节点上。</p>
+<h1 id="Copy-on-Write模式：不是延时策略的COW"><a href="#Copy-on-Write模式：不是延时策略的COW" class="headerlink" title="Copy-on-Write模式：不是延时策略的COW"></a>Copy-on-Write模式：不是延时策略的COW</h1><p>所谓 Copy-on-Write，经常被缩写为 COW 或者 CoW，顾名思义就是<strong>写时复制</strong>。不可变对象的写操作往往都是使用 Copy-on-Write 方法解决的，当然 Copy-on-Write 的应用领域并不局限于 Immutability 模式。</p>
+<h2 id="Copy-on-Write-模式的应用领域"><a href="#Copy-on-Write-模式的应用领域" class="headerlink" title="Copy-on-Write 模式的应用领域"></a>Copy-on-Write 模式的应用领域</h2><p>CopyOnWriteArrayList 和 CopyOnWriteArraySet 这两个 Copy-on-Write 容器，它们背后的设计思想就是 Copy-on-Write；通过 Copy-on-Write 这两个容器实现的读操作是无锁的，由于无锁，所以将读操作的性能发挥到了极致。</p>
+<p>使用 Copy-on-Write 更多地体现的是一种<strong>延时策略，只有在真正需要复制的时候才复制，而不是提前复制好</strong>，同时 Copy-on-Write 还支持按需复制，所以 Copy-on-Write 在操作系统领域是能够提升性能的。</p>
+<p>Java 提供的 Copy-on-Write 容器，由于在修改的同时会复制整个容器，所以在提升读操作性能的同时，是以内存复制为代价的。这里你会发现，同样是应用 Copy-on-Write，不同的场景，对性能的影响是不同的。</p>
+<p><strong>Copy-on-Write 最大的应用领域还是在函数式编程领域</strong>。</p>
+<h2 id="一个真实案例"><a href="#一个真实案例" class="headerlink" title="一个真实案例"></a>一个真实案例</h2><p>RPC 框架的一个核心任务就是维护服务的路由关系，而且路由表是典型的读多写少类问题，对读的性能要求很高，读多写少，弱一致性。</p>
+<p>Copy-on-Write 是一项非常通用的技术方案，在很多领域都有着广泛的应用。不过，它也有缺点的，那就是消耗内存，每次修改都需要复制一个新的对象出来</p>
+<p> Router 该如何设计，服务提供方的每一次上线、下线都会更新路由信息，这时候你有两种选择。一种是通过更新 Router 的一个状态位来标识，如果这样做，那么所有访问该状态位的地方都需要同步访问，这样很影响性能。另外一种就是采用 Immutability 模式，每次上线、下线都创建新的 Router 对象或者删除对应的 Router 对象。由于上线、下线的频率很低，所以后者是最好的选择。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 路由信息public final class Router&#123;  private final String  ip;  private final Integer port;  private final String  iface;  // 构造函数  public Router(String ip, Integer port, String iface)&#123;    this.ip = ip;    this.port = port;    this.iface = iface;  &#125;  // 重写 equals 方法  public boolean equals(Object obj)&#123;    if (obj instanceof Router) &#123;      Router r = (Router)obj;      return iface.equals(r.iface) &amp;&amp; ip.equals(r.ip) &amp;&amp; port.equals(r.port);    &#125;    return false;  &#125;  public int hashCode() &#123;    // 省略 hashCode 相关代码  &#125;&#125;// 路由表信息public class RouterTable &#123;  //Key: 接口名  //Value: 路由集合  ConcurrentHashMap&lt;String, CopyOnWriteArraySet&lt;Router&gt;&gt; rt = new ConcurrentHashMap&lt;&gt;();  // 根据接口名获取路由表  public Set&lt;Router&gt; get(String iface)&#123;    return rt.get(iface);  &#125;  // 删除路由  public void remove(Router router) &#123;    Set&lt;Router&gt; set=rt.get(router.iface);    if (set != null) &#123;      set.remove(router);    &#125;  &#125;  // 增加路由  public void add(Router router) &#123;    Set&lt;Router&gt; set = rt.computeIfAbsent(route.iface, r -&gt; new CopyOnWriteArraySet&lt;&gt;());    set.add(router);  &#125;&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h1 id="线程本地存储模式：没有共享，就没有伤害"><a href="#线程本地存储模式：没有共享，就没有伤害" class="headerlink" title="线程本地存储模式：没有共享，就没有伤害"></a>线程本地存储模式：没有共享，就没有伤害</h1><p>多个线程同时读写同一共享变量存在并发问题，没有共享变量也不会有并发问题。</p>
+<p>如何避免共享呢？</p>
+<p>每个线程都拥有自己的变量，彼此之间不共享。</p>
+<p><strong>Java 语言提供的线程本地存储（ThreadLocal）就能够做到线程封闭</strong></p>
+<h2 id="ThreadLocal-的使用方法"><a href="#ThreadLocal-的使用方法" class="headerlink" title="ThreadLocal 的使用方法"></a>ThreadLocal 的使用方法</h2><h2 id="ThreadLocal-的工作原理"><a href="#ThreadLocal-的工作原理" class="headerlink" title="ThreadLocal 的工作原理"></a>ThreadLocal 的工作原理</h2><p><strong>两种设计方案：</strong></p>
+<p><strong>方案一：</strong></p>
+<p>ThreadLocal 的目标是让不同的线程有不同的变量 V，那最直接的方法就是创建一个 Map，它的 Key 是线程，Value 是每个线程拥有的变量 V，ThreadLocal 内部持有这样的一个 Map 就可以了。</p>
+<img src="https://raw.githubusercontent.com/EdwardLee50/images/master/https://github.com/EdwardLee50/images/image-20211111101201049.png" alt="image-20211111101201049" style="zoom:50%;" />
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MyThreadLocal</span>&lt;<span class="title">T</span>&gt; </span>&#123;  Map&lt;Thread, T&gt; locals = <span class="keyword">new</span> ConcurrentHashMap&lt;&gt;();  <span class="comment">// 获取线程变量    T get() &#123;    return locals.get(Thread.currentThread());  &#125;  // 设置线程变量  void set(T t) &#123;    locals.put(Thread.currentThread(), t);  &#125;&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>方案二：</strong></p>
+<p>Java实现</p>
+<p>Java 的实现里面也有一个 Map，叫做 ThreadLocalMap，不过持有 ThreadLocalMap 的不是 ThreadLocal，而是 Thread。Thread 这个类内部有一个私有属性 threadLocals，其类型就是 ThreadLocalMap，ThreadLocalMap 的 Key 是 ThreadLocal。</p>
+<img src="https://raw.githubusercontent.com/EdwardLee50/images/master/https://github.com/EdwardLee50/images/image-20211111102139902.png" alt="image-20211111102139902" style="zoom:50%;" />
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Thread</span> </span>&#123;  <span class="comment">// 内部持有 ThreadLocalMap  ThreadLocal.ThreadLocalMap threadLocals;&#125;class ThreadLocal&lt;T&gt;&#123;  public T get() &#123;    // 首先获取线程持有的    //ThreadLocalMap    ThreadLocalMap map = Thread.currentThread().threadLocals;    // 在 ThreadLocalMap 中    // 查找变量    Entry e = map.getEntry(this);    return e.value;    &#125;  static class ThreadLocalMap&#123;    // 内部是数组而不是 Map    Entry[] table;    // 根据 ThreadLocal 查找 Entry    Entry getEntry(ThreadLocal key)&#123;      // 省略查找逻辑    &#125;    //Entry 定义    static class Entry extends WeakReference&lt;ThreadLocal&gt;&#123;      Object value;    &#125;  &#125;&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>在 Java 的实现方案里面，ThreadLocal 仅仅是一个代理工具类，内部并不持有任何与线程相关的数据，所有和线程相关的数据都存储在 Thread 里面，<strong>不容易产生内存泄露</strong>。</p>
+<p>ThreadLocal 持有的 Map 会持有 Thread 对象的引用，这就意味着，<strong>只要 ThreadLocal 对象存在，那么 Map 中的 Thread 对象就永远不会被回收</strong>。ThreadLocal 的生命周期往往都比线程要长，所以这种设计方案很容易导致内存泄露。而 Java 的实现中 Thread 持有 ThreadLocalMap，而且 ThreadLocalMap 里对 ThreadLocal 的引用还是弱引用（WeakReference），所以只要 Thread 对象可以被回收，那么 ThreadLocalMap 就能被回收。Java 的这种实现方案虽然看上去复杂一些，但是更加安全。</p>
+<h2 id="ThreadLocal-与内存泄露"><a href="#ThreadLocal-与内存泄露" class="headerlink" title="ThreadLocal 与内存泄露"></a>ThreadLocal 与内存泄露</h2><p>在线程池中线程的存活时间太长（往往都是和程序同生共死的），这就意味着 Thread 持有的 ThreadLocalMap 一直都不会被回收，再加上 ThreadLocalMap 中的 Entry 对 ThreadLocal 是弱引用（WeakReference），所以只要 ThreadLocal 结束了自己的生命周期是可以被回收掉的。</p>
+<p>但是 Entry 中的 Value 却是被 Entry 强引用的，所以即便 Value 的生命周期结束了，Value 也是无法被回收的，从而导致内存泄露。</p>
+<p>因此在使用ThreadLocal时，需要手动释放资源。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ExecutorService es;ThreadLocal tl;es.execute(()-&gt;&#123;  <span class="comment">//ThreadLocal 增加变量  tl.set(obj);  try &#123;    // 省略业务逻辑代码  &#125;finally &#123;    // 手动清理 ThreadLocal     tl.remove();  &#125;&#125;);</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="InheritableThreadLocal-与继承性"><a href="#InheritableThreadLocal-与继承性" class="headerlink" title="InheritableThreadLocal 与继承性"></a>InheritableThreadLocal 与继承性</h2><p>通过 ThreadLocal 创建的线程变量，其子线程是无法继承的。在子线程中是无法通过 ThreadLocal 来访问父线程的线程变量 V 的。</p>
+<p>如果需要<strong>子线程继承父线程的线程变量</strong>，Java 提供了 InheritableThreadLocal 来支持这种特性</p>
+<p>InheritableThreadLocal 的问题：</p>
+<ol>
+<li>内存泄漏；</li>
+<li>线程创建的动态性导致业务逻辑计算错误。</li>
+</ol>
+<p>Spring 使用 ThreadLocal 来传递事务信息。</p>
+<h1 id="Guarded-Suspension模式：等待唤醒机制的规范实现"><a href="#Guarded-Suspension模式：等待唤醒机制的规范实现" class="headerlink" title="Guarded Suspension模式：等待唤醒机制的规范实现"></a>Guarded Suspension模式：等待唤醒机制的规范实现</h1><h2 id="Guarded-Suspension-模式"><a href="#Guarded-Suspension-模式" class="headerlink" title="Guarded Suspension 模式"></a>Guarded Suspension 模式</h2><p>所谓 Guarded Suspension，直译过来就是“保护性地暂停”。</p>
+<p><img src="https://raw.githubusercontent.com/EdwardLee50/images/master/https://github.com/EdwardLee50/images/image-20211113144657087.png" alt="image-20211113144657087"></p>
+<p>GuardedObject 参与者是一个拥有被防卫的方法（guardedMethod）的类。当线程执行guardedMethod时，只要满足警戒条件，就能继续执行，否则线程会进入wait set区等待。警戒条件是否成立随着GuardedObject的状态而变化。<br>GuardedObject 参与者除了guardedMethod外，可能还有用来更改实例状态的的方法stateChangingMethod。</p>
+<p>在Java语言中，是使用while语句和wait方法来实现guardedMethod的；使用notify/notifyAll方法实现stateChangingMethod。</p>
+<p>实现：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*** 功能：调用get方法获取到受保护的对象。* 其中，get方法会通过predicate断言进行异步阻塞，故可认为执行过程如下：* 1、创建GuardedObject实例，调用get方法获取对象并阻塞。* 2、调用onChanged方法通知事件完成，唤醒阻塞的线程，get方法顺利返回。* */</span><span class="class"><span class="keyword">class</span> <span class="title">GuardedObject</span>&lt;<span class="title">T</span>&gt;</span>&#123;  <span class="comment">// 受保护的对象  T obj;  final Lock lock = new ReentrantLock();  final Condition done = lock.newCondition();  final int timeout=1;  // 获取受保护对象    T get(Predicate&lt;T&gt; p) &#123;    lock.lock();    try &#123;      // MESA 管程推荐写法      while(!p.test(obj))&#123;        done.await(timeout, TimeUnit.SECONDS);      &#125;    &#125;catch(InterruptedException e)&#123;      throw new RuntimeException(e);    &#125;finally&#123;      lock.unlock();    &#125;    // 返回非空的受保护对象    return obj;  &#125;  // 事件通知方法  void onChanged(T obj) &#123;    lock.lock();    try &#123;      this.obj = obj;      done.signalAll();    &#125; finally &#123;      lock.unlock();    &#125;  &#125;&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="扩展-Guarded-Suspension-模式"><a href="#扩展-Guarded-Suspension-模式" class="headerlink" title="扩展 Guarded Suspension 模式"></a>扩展 Guarded Suspension 模式</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 处理浏览器发来的请求Respond handleWebReq()&#123;  // 创建一消息  Message msg1 = new Message(&quot;1&quot;,&quot;&#123;...&#125;&quot;);  // 发送消息  send(msg1);  // 利用 GuardedObject 实现等待  GuardedObject&lt;Message&gt; go = new GuardObjec&lt;&gt;();  Message r = go.get(t-&gt;t != null);&#125;// MQ消费消息时，调用go的onChanged方法消费消息，唤醒线程void onMessage(Message msg)&#123;  // 如何找到匹配的 go？  GuardedObject&lt;Message&gt; go=???  go.onChanged(msg);&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>在处理 Web 请求的方法 handleWebReq() 中，可以调用 GuardedObject 的 get() 方法来实现等待；在 MQ 消息的消费方法 onMessage() 中，可以调用 GuardedObject 的 onChanged() 方法来实现唤醒。</p>
+<p>但是在实现的时候会遇到一个问题，handleWebReq() 里面创建了 GuardedObject 对象的实例 go，并调用其 get() 方等待结果，那在 onMessage() 方法中，如何才能够找到匹配的 GuardedObject 对象呢？</p>
+<p><strong>每个发送到 MQ 的消息，都有一个唯一性的属性 id，所以我们可以维护一个 MQ 消息 id 和 GuardedObject 对象实例的关系</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">GuardedObject</span>&lt;<span class="title">T</span>&gt;</span>&#123;  <span class="comment">// 受保护的对象  T obj;  final Lock lock = new ReentrantLock();  final Condition done = lock.newCondition();  final int timeout=2;  // 保存所有 GuardedObject  final static Map&lt;Object, GuardedObject&gt; gos=new ConcurrentHashMap&lt;&gt;();      // 静态方法创建 GuardedObject  static &lt;K&gt; GuardedObject create(K key)&#123;    GuardedObject go=new GuardedObject();    gos.put(key, go);    return go;  &#125;  static &lt;K, T&gt; void fireEvent(K key, T obj)&#123;    GuardedObject go=gos.remove(key);    if (go != null)&#123;      go.onChanged(obj);    &#125;  &#125;  // 获取受保护对象    T get(Predicate&lt;T&gt; p) &#123;    lock.lock();    try &#123;      //MESA 管程推荐写法，通过自旋锁每隔一段时间进行判断      while(!p.test(obj))&#123;        done.await(timeout, TimeUnit.SECONDS);      &#125;    &#125;catch(InterruptedException e)&#123;      throw new RuntimeException(e);    &#125;finally&#123;      lock.unlock();    &#125;    // 返回非空的受保护对象    return obj;  &#125;  // 事件通知方法  void onChanged(T obj) &#123;    lock.lock();    try &#123;      this.obj = obj;      done.signalAll();    &#125; finally &#123;      lock.unlock();    &#125;  &#125;&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>扩展后的 GuardedObject 内部维护了一个 Map，其 Key 是 MQ 消息 id，而 Value 是 GuardedObject 对象实例，同时增加了静态方法 create() 和 fireEvent()；create() 方法用来创建一个 GuardedObject 对象实例，并根据 key 值将其加入到 Map 中，而 fireEvent() 方法则是根据id获取到对应的GuardedObject对象。</p>
+<p>使用方式如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 处理浏览器发来的请求Respond handleWebReq()&#123;  int id= 序号生成器.get();  // 创建一消息  Message msg1 = new Message(id,&quot;&#123;...&#125;&quot;);  // 创建 GuardedObject 实例  GuardedObject&lt;Message&gt; go = GuardedObject.create(id);    // 发送消息  send(msg1);  // 等待 MQ 消息  Message r = go.get(t-&gt;t != null);  &#125;void onMessage(Message msg)&#123;  // 唤醒等待的线程  GuardedObject.fireEvent(msg.id, msg);&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>Guarded Suspension 模式本质上是一种等待唤醒机制的实现，只不过 Guarded Suspension 模式将其规范化了。</p>
+<p>Dubbo 中 DefaultFuture 这个类也是采用的这种方式，Guarded Suspension 模式也常被称作 Guarded Wait 模式、Spin Lock 模式（因为使用了 while 循环去等待）。它还有一个更形象的非官方名字：多线程版本的 if。</p>
+<h1 id="Balking模式：再谈线程安全的单例模式"><a href="#Balking模式：再谈线程安全的单例模式" class="headerlink" title="Balking模式：再谈线程安全的单例模式"></a>Balking模式：再谈线程安全的单例模式</h1><p>有些场景需要快速放弃。如果现在不合适执行这个操作，或者没必要执行这个操作，就停止处理，直接返回。<br>在Balking模式中，如果守护条件不成立，就立即中断处理。</p>
+<h2 id="Balking-模式的经典实现"><a href="#Balking-模式的经典实现" class="headerlink" title="Balking 模式的经典实现"></a>Balking 模式的经典实现</h2><p>Balking 模式本质上是一种规范化地解决“多线程版本的 if”的方案，将 其他方法中对共享变量 changed 的赋值操作抽取到了 change() 中，将并发处理逻辑和业务逻辑分离。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">AutoSaveEditor</span></span>&#123;  <span class="comment">// 文件是否被修改过  boolean changed=false;  // 定时任务线程池  ScheduledExecutorService ses = Executors.newSingleThreadScheduledExecutor();  // 定时执行自动保存  void startAutoSave()&#123;    ses.scheduleWithFixedDelay(()-&gt;&#123;      autoSave();    &#125;, 5, 5, TimeUnit.SECONDS);    &#125;  // 自动存盘操作  void autoSave()&#123;    synchronized(this)&#123;      if (!changed) &#123;        return;      &#125;      changed = false;    &#125;    // 执行存盘操作    // 省略且实现    this.execSave();  &#125;  // 编辑操作  void edit()&#123;    // 省略编辑逻辑    ......    changed();  &#125;    // 改变状态  void change()&#123;    synchronized(this)&#123;      changed = true;    &#125;  &#125;&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="用-volatile-实现-Balking-模式"><a href="#用-volatile-实现-Balking-模式" class="headerlink" title="用 volatile 实现 Balking 模式"></a>用 volatile 实现 Balking 模式</h2><p>在某些特定场景下，也可以使用 volatile 来实现，但<strong>使用 volatile 的前提是对原子性没有要求</strong>。</p>
+<p>在 RPC 框架中，本地路由表是要和注册中心进行信息同步的，应用启动的时候，会将应用依赖服务的路由表从注册中心同步到本地路由表中，如果应用重启的时候注册中心宕机，那么会导致该应用依赖的服务均不可用，因为找不到依赖服务的路由表。</p>
+<p>为了防止这种极端情况出现，RPC 框架可以将本地路由表自动保存到本地文件中，如果重启的时候注册中心宕机，那么就从本地文件中恢复重启前的路由表。</p>
+<p>这其实也是一种降级的方案。</p>
+<p><strong>Balking 模式有一个非常典型的应用场景就是单次初始化</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">InitTest</span></span>&#123;  <span class="keyword">boolean</span> inited = <span class="keyword">false</span>;  <span class="function"><span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">()</span></span>&#123;    <span class="keyword">if</span>(inited)&#123;      <span class="keyword">return</span>;    &#125;    <span class="comment">// 省略 doInit 的实现    doInit();    inited=true;  &#125;&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>init() 声明为一个同步方法，这样同一个时刻就只有一个线程能够执行 init() 方法；</p>
+<p>init() 方法在第一次执行完时会将 inited 设置为 true，这样后续执行 init() 方法的线程就不会再执行 doInit() 了。</p>
+<h1 id="Thread-Per-Message模式：最简单实用的分工方法"><a href="#Thread-Per-Message模式：最简单实用的分工方法" class="headerlink" title="Thread-Per-Message模式：最简单实用的分工方法"></a>Thread-Per-Message模式：最简单实用的分工方法</h1><p><strong>解决并发编程问题，首要问题也是解决宏观的分工问题</strong>。</p>
+<p>并发编程领域里，解决分工问题也有一系列的设计模式，比较常用的主要有 Thread-Per-Message 模式、Worker Thread 模式、生产者 - 消费者模式。</p>
+<h2 id="如何理解-Thread-Per-Message-模式"><a href="#如何理解-Thread-Per-Message-模式" class="headerlink" title="如何理解 Thread-Per-Message 模式"></a>如何理解 Thread-Per-Message 模式</h2><p><strong>Thread-Per-Message 模式</strong>，简言之就是为每个任务分配一个独立的线程。</p>
+<h2 id="用-Thread-实现-Thread-Per-Message-模式"><a href="#用-Thread-实现-Thread-Per-Message-模式" class="headerlink" title="用 Thread 实现 Thread-Per-Message 模式"></a>用 Thread 实现 Thread-Per-Message 模式</h2><p>Thread-Per-Message 模式的一个最经典的应用场景是<strong>网络编程里服务端的实现</strong>，服务端为每个客户端请求创建一个独立的线程，当线程处理完请求后，自动销毁，这是一种最简单的并发处理网络请求的方法。</p>
+<p> Java 中的线程是一个重量级的对象，创建成本很高，一方面创建线程比较耗时，另一方面线程占用的内存也比较大。所以，为每个请求创建一个新的线程并不适合高并发场景。</p>
+<p>Java 语言里，Java 线程是和操作系统线程一一对应的，这种做法本质上是将 Java 线程的调度权完全委托给操作系统，而操作系统在这方面非常成熟，所以这种做法的好处是稳定、可靠，但是也继承了操作系统线程的缺点：创建成本高。</p>
+<p>业界还有另外一种方案，叫做<strong>轻量级线程</strong>。这个方案在 Java 领域知名度并不高，但是在其他编程语言里却叫得很响，例如 Go 语言、Lua 语言里的协程，本质上就是一种轻量级的线程。轻量级的线程，创建的成本很低，基本上和创建一个普通对象的成本相似；并且创建的速度和内存占用相比操作系统线程至少有一个数量级的提升，所以基于轻量级线程实现 Thread-Per-Message 模式就完全没有问题了。</p>
+<p>在OpenJDK 的 Loom 项目中，轻量级线程被叫做<strong>Fiber</strong>。</p>
+<h2 id="用-Fiber-实现-Thread-Per-Message-模式"><a href="#用-Fiber-实现-Thread-Per-Message-模式" class="headerlink" title="用 Fiber 实现 Thread-Per-Message 模式"></a>用 Fiber 实现 Thread-Per-Message 模式</h2><p>用 Fiber 实现 echo 服务的示例代码</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> ServerSocketChannel ssc = ServerSocketChannel.open().bind(<span class="keyword">new</span> InetSocketAddress(<span class="number">8080</span>));<span class="comment">// 处理请求try&#123;  while (true) &#123;    // 接收请求    final SocketChannel sc = serverSocketChannel.accept();    // 把 new Thread(()-&gt;&#123;…&#125;).start() 换成 Fiber.schedule(()-&gt;&#123;&#125;)    Fiber.schedule(()-&gt;&#123;      try &#123;        // 读 Socket        ByteBuffer rb = ByteBuffer.allocateDirect(1024);        sc.read(rb);        // 模拟处理请求        LockSupport.parkNanos(2000*1000000);        // 写 Socket        ByteBuffer wb = (ByteBuffer)rb.flip()        sc.write(wb);        // 关闭 Socket        sc.close();      &#125; catch(Exception e)&#123;        throw new UncheckedIOException(e);      &#125;    &#125;);  &#125;//while&#125;finally&#123;  ssc.close();&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h1 id="Worker-Thread模式：如何避免重复创建线程？"><a href="#Worker-Thread模式：如何避免重复创建线程？" class="headerlink" title="Worker Thread模式：如何避免重复创建线程？"></a>Worker Thread模式：如何避免重复创建线程？</h1><h2 id="Worker-Thread-模式及其实现"><a href="#Worker-Thread-模式及其实现" class="headerlink" title="Worker Thread 模式及其实现"></a>Worker Thread 模式及其实现</h2><p><img src="https://raw.githubusercontent.com/EdwardLee50/images/master/https://github.com/EdwardLee50/images/image-20211113160945993.png" alt="image-20211113160945993"></p>
+<p>这个方案就是 Java 语言提供的线程池</p>
+<p>用 Java 的 Thread 实现 Thread-Per-Message 模式难以应对高并发场景，原因就在于频繁创建、销毁 Java 线程的成本有点高，而且无限制地创建线程还可能导致应用 OOM。线程池，则恰好能解决这些问题。</p>
+<h2 id="正确地创建线程池"><a href="#正确地创建线程池" class="headerlink" title="正确地创建线程池"></a>正确地创建线程池</h2><p>Java 的线程池既能够避免无限制地<strong>创建线程</strong>导致 OOM，也能避免无限制地<strong>接收任务</strong>导致 OOM。</p>
+<p>强烈建议你<strong>用创建有界的队列来接收任务</strong>。</p>
+<p><strong>在创建线程池时，清晰地指明拒绝策略</strong>。</p>
+<p><strong>为了便于调试和诊断问题，在实际工作中给线程赋予一个业务相关的名字</strong>。</p>
+<h2 id="避免线程死锁"><a href="#避免线程死锁" class="headerlink" title="避免线程死锁"></a>避免线程死锁</h2><p>如果提交到相同线程池的任务不是相互独立的，而是有依赖关系的，那么就有可能导致线程死锁。</p>
+<p>具体现象是<strong>应用每运行一段时间偶尔就会处于无响应的状态，监控数据看上去一切都正常，但是实际上已经不能正常工作了</strong>。</p>
+<p>当应用出现类似问题时，首选的诊断方法是查看线程栈。</p>
+<p><strong>通用的解决方案是为不同的任务创建不同的线程池</strong>。</p>
+<p><strong>提交到相同线程池中的任务一定是相互独立的，否则就一定要慎重</strong>。</p>
+<h1 id="两阶段终止模式：如何优雅地终止线程？"><a href="#两阶段终止模式：如何优雅地终止线程？" class="headerlink" title="两阶段终止模式：如何优雅地终止线程？"></a>两阶段终止模式：如何优雅地终止线程？</h1><p>Java 语言的 Thread 类中曾经提供了一个 stop() 方法，用来终止线程，可是早已不建议使用了，原因是这个方法用的就是一剑封喉的做法，被终止的线程没有机会料理后事。</p>
+<h2 id="如何理解两阶段终止模式"><a href="#如何理解两阶段终止模式" class="headerlink" title="如何理解两阶段终止模式"></a>如何理解两阶段终止模式</h2><p><img src="https://raw.githubusercontent.com/EdwardLee50/images/master/https://github.com/EdwardLee50/images/image-20211113162320435.png" alt="image-20211113162320435"></p>
+<p><strong>两阶段终止模式</strong>，就是将终止过程分成两个阶段，其中第一个阶段主要是线程 T1 向线程 T2<strong>发送终止指令</strong>，而第二阶段则是线程 T2<strong>响应终止指令</strong>。</p>
+<ol>
+<li>要想终止一个线程，首先要把线程的状态从休眠状态（blocking、waiting、timed_waiting）转换到 RUNNABLE 状态。Java Thread 类提供的<strong>interrupt() 方法</strong>，它可以将休眠状态的线程转换到 RUNNABLE 状态。</li>
+<li>RUNNABLE 状态转换到终止状态，优雅的方式是让 Java 线程自己执行完 run() 方法，所以一般我们采用的方法是<strong>设置一个标志位</strong>，然后线程会在合适的时机检查这个标志位，如果发现符合终止条件，则自动退出 run() 方法。这个过程其实就是我们前面提到的第二阶段：<strong>响应终止指令</strong>。</li>
+</ol>
+<p>综合上面这两点，终止指令包括两方面内容：<strong>interrupt() 方法</strong>和<strong>线程终止的标志位</strong>。</p>
+<h2 id="用两阶段终止模式终止监控操作"><a href="#用两阶段终止模式终止监控操作" class="headerlink" title="用两阶段终止模式终止监控操作"></a>用两阶段终止模式终止监控操作</h2><p>实际工作中，有些监控系统需要动态地采集一些数据，一般都是监控系统发送采集指令给被监控系统的监控代理，监控代理接收到指令之后，从监控目标收集数据，然后回传给监控系统，出于对性能的考虑，动态采集功能一般都会有终止操作。</p>
+<img src="https://raw.githubusercontent.com/EdwardLee50/images/master/https://github.com/EdwardLee50/images/image-20211113230854344.png" alt="image-20211113230854344" style="zoom:75%;" />
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Proxy</span> </span>&#123;  <span class="keyword">boolean</span> started = <span class="keyword">false</span>;  <span class="comment">// 采集线程  Thread rptThread;  // 启动采集功能  synchronized void start()&#123;    // 不允许同时启动多个采集线程    if (started) &#123;      return;    &#125;    started = true;    rptThread = new Thread(()-&gt;&#123;      while (!Thread.currentThread().isInterrupted())&#123; // 2. 通过线程中断的标志位来判断终止        // 省略采集、回传实现        report();        // 每隔两秒钟采集、回传一次数据        try &#123;          Thread.sleep(2000);        &#125; catch (InterruptedException e)&#123;          // 重新设置线程中断状态          Thread.currentThread().interrupt();        &#125;      &#125;      // 执行到此处说明线程马上终止      started = false;    &#125;);    rptThread.start();  &#125;  // 终止采集功能  synchronized void stop()&#123;    rptThread.interrupt();  // 1.将线程 rptThread 状态转换到 RUNNABLE  &#125;&#125;</span></span><br></pre></td></tr></table></figure>
+
+<ol>
+<li><p>将线程 rptThread 状态转换到 RUNNABLE，只需要在调用 rptThread.interrupt() 就可以了。</p>
+</li>
+<li><p>线程 rptThread 的状态转换到 RUNNABLE 之后，通过线程中断的标志位来判断终止。</p>
+<blockquote>
+<p>需要注意的是，因为 JVM 的异常处理会清除线程的中断状态，因此在捕获 Thread.sleep() 的中断异常之后，需要通过 Thread.currentThread().interrupt()重新设置线程的中断状态。</p>
+</blockquote>
+</li>
+</ol>
+<p>但在工作中，可能在run()方法中调用的第三方库中捕获到Thread.sleep() 方法抛出的中断异常后，没有重新设置线程的中断状态，那么就会导致线程不能够正常终止。所以强烈建议<strong>设置自己的线程终止标志位</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Proxy</span> </span>&#123;  <span class="comment">// 线程终止标志位  volatile boolean terminated = false;  boolean started = false;  // 采集线程  Thread rptThread;  // 启动采集功能  synchronized void start()&#123;    // 不允许同时启动多个采集线程    if (started) &#123;      return;    &#125;    started = true;    terminated = false;    rptThread = new Thread(()-&gt;&#123;      while (!terminated)&#123;        // 省略采集、回传实现        report();        // 每隔两秒钟采集、回传一次数据        try &#123;          Thread.sleep(2000);        &#125; catch (InterruptedException e)&#123;          // 重新设置线程中断状态          Thread.currentThread().interrupt();        &#125;      &#125;      // 执行到此处说明线程马上终止      started = false;    &#125;);    rptThread.start();  &#125;  // 终止采集功能  synchronized void stop()&#123;    // 设置中断标志位    terminated = true;    // 中断线程 rptThread    rptThread.interrupt();  &#125;&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="如何优雅地终止线程池"><a href="#如何优雅地终止线程池" class="headerlink" title="如何优雅地终止线程池"></a>如何优雅地终止线程池</h2><p>线程池提供了两个方法：**shutdown()<strong>和</strong>shutdownNow()**。</p>
+<p>Java 线程池是生产者 - 消费者模式的一种实现，提交给线程池的任务，首先是进入一个阻塞队列中，之后线程池中的线程从阻塞队列中取出任务执行。</p>
+<p>shutdown() 方法是一种很保守的关闭线程池的方法。线程池执行 shutdown() 后，就会拒绝接收新的任务，但是会等待线程池中正在执行的任务和已经进入阻塞队列的任务都执行完之后才最终关闭线程池。</p>
+<p>shutdownNow() 方法，相对就激进一些了，线程池执行 shutdownNow() 后，会拒绝接收新的任务，同时还会中断线程池中正在执行的任务，已经进入阻塞队列的任务也被剥夺了执行的机会，不过这些被剥夺执行机会的任务会作为 shutdownNow() 方法的返回值返回。</p>
+<blockquote>
+<p>因为 shutdownNow() 方法会中断正在执行的线程，所以提交到线程池的任务，如果需要优雅地结束，就需要正确地处理线程中断。</p>
+</blockquote>
+<p>shutdown() 和 shutdownNow() 实质上使用的也是两阶段终止模式，只是终止指令的范围不同而已，前者只影响阻塞队列接收任务，后者范围扩大到线程池中所有的任务。</p>
+<h1 id="生产者-消费者模式：用流水线思想提高效率"><a href="#生产者-消费者模式：用流水线思想提高效率" class="headerlink" title="生产者-消费者模式：用流水线思想提高效率"></a>生产者-消费者模式：用流水线思想提高效率</h1><p>Java 线程池本质上就是用生产者 - 消费者模式实现的</p>
+<h2 id="生产者-消费者模式的优点"><a href="#生产者-消费者模式的优点" class="headerlink" title="生产者 - 消费者模式的优点"></a>生产者 - 消费者模式的优点</h2><p><img src="https://raw.githubusercontent.com/EdwardLee50/images/master/https://github.com/EdwardLee50/images/image-20211113162037131.png" alt="image-20211113162037131"></p>
+<p>生产者 - 消费者模式的核心是一个<strong>任务队列</strong>。在该模式中，通常有两类线程，生产者线程生产任务，并将任务添加到任务队列中，而消费者线程从任务队列中获取任务并执行。生产者与消费者之间则通过共享内存缓冲区进行通信。</p>
+<table>
+<thead>
+<tr>
+<th>角色</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>生产者</td>
+<td>用于提交用户请求，提取用户任务，并装入内存缓冲区</td>
+</tr>
+<tr>
+<td>消费者</td>
+<td>在内存缓冲区中提取并处理任务</td>
+</tr>
+<tr>
+<td>内存缓冲区</td>
+<td>缓存生产者提交的任务或数据，供消费者使用</td>
+</tr>
+<tr>
+<td>任务</td>
+<td>生产者向内存缓冲区提交的数据结构</td>
+</tr>
+<tr>
+<td>main</td>
+<td>使用生产者和消费者的客户端</td>
+</tr>
+</tbody></table>
+<p>从架构设计的角度来看，生产者 - 消费者模式有一个很重要的优点，就是<strong>解耦</strong>。</p>
+<p>生产者 - 消费者模式还有一个重要的优点就是<strong>支持异步，并且能够平衡生产者和消费者的速度差异</strong>。任务的生产和消费是异步的</p>
+<h2 id="支持批量执行以提升性能"><a href="#支持批量执行以提升性能" class="headerlink" title="支持批量执行以提升性能"></a>支持批量执行以提升性能</h2><p>利用生产者 - 消费者模式实现批量执行 SQL 非常简单：将原来直接 INSERT 数据到数据库的线程作为生产者线程，生产者线程只需将数据添加到任务队列，然后消费者线程负责将任务从任务队列中批量取出并批量执行。</p>
+<h2 id="支持分阶段提交以提升性能"><a href="#支持分阶段提交以提升性能" class="headerlink" title="支持分阶段提交以提升性能"></a>支持分阶段提交以提升性能</h2><p>利用生产者 - 消费者模式还可以轻松地支持一种分阶段提交的应用场景。我们知道写文件如果同步刷盘性能会很慢，所以对于不是很重要的数据，我们往往采用异步刷盘的方式。我曾经参与过一个项目，其中的日志组件是自己实现的，采用的就是异步刷盘方式，刷盘的时机是：</p>
+<ol>
+<li>ERROR 级别的日志需要立即刷盘；</li>
+<li>数据积累到 500 条需要立即刷盘；</li>
+<li>存在未刷盘数据，且 5 秒钟内未曾刷盘，需要立即刷盘。</li>
+</ol>
+<p>这个日志组件的异步刷盘操作本质上其实就是一种<strong>分阶段提交</strong>。</p>
+<p>生产者 - 消费者模式在分布式计算中的应用也非常广泛。在分布式场景下，可以借助分布式消息队列（MQ）来实现生产者 - 消费者模式。MQ 一般都会支持两种消息模型，一种是点对点模型，一种是发布订阅模型。这两种模型的区别在于，点对点模型里一个消息只会被一个消费者消费，和 Java 的线程池非常类似（Java 线程池的任务也只会被一个线程执行）；而发布订阅模型里一个消息会被多个消费者消费，本质上是一种消息的广播。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/EdwardLee50/EdwardLee50.github.io/tags/java-%E5%B9%B6%E5%8F%91/" rel="tag"># java,并发</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/EdwardLee50/EdwardLee50.github.io/2020/04/16/Java%E5%B9%B6%E5%8F%91%EF%BC%88%E4%BA%8C%EF%BC%89/" rel="prev" title="Java并发摘要笔记（二）">
+      <i class="fa fa-chevron-left"></i> Java并发摘要笔记（二）
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/EdwardLee50/EdwardLee50.github.io/2020/04/27/Java%E5%B9%B6%E5%8F%91%EF%BC%88%E5%9B%9B%EF%BC%89/" rel="next" title="Java并发摘要笔记（四）">
+      Java并发摘要笔记（四） <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Immutability%E6%A8%A1%E5%BC%8F%EF%BC%9A%E5%A6%82%E4%BD%95%E5%88%A9%E7%94%A8%E4%B8%8D%E5%8F%98%E6%80%A7%E8%A7%A3%E5%86%B3%E5%B9%B6%E5%8F%91%E9%97%AE%E9%A2%98%EF%BC%9F"><span class="nav-number">1.</span> <span class="nav-text">Immutability模式：如何利用不变性解决并发问题？</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BF%AB%E9%80%9F%E5%AE%9E%E7%8E%B0%E5%85%B7%E5%A4%87%E4%B8%8D%E5%8F%AF%E5%8F%98%E6%80%A7%E7%9A%84%E7%B1%BB"><span class="nav-number">1.1.</span> <span class="nav-text">快速实现具备不可变性的类</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%A9%E7%94%A8%E4%BA%AB%E5%85%83%E6%A8%A1%E5%BC%8F%E9%81%BF%E5%85%8D%E5%88%9B%E5%BB%BA%E9%87%8D%E5%A4%8D%E5%AF%B9%E8%B1%A1"><span class="nav-number">1.2.</span> <span class="nav-text">利用享元模式避免创建重复对象</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8-Immutability-%E6%A8%A1%E5%BC%8F%E7%9A%84%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">1.3.</span> <span class="nav-text">使用 Immutability 模式的注意事项</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Copy-on-Write%E6%A8%A1%E5%BC%8F%EF%BC%9A%E4%B8%8D%E6%98%AF%E5%BB%B6%E6%97%B6%E7%AD%96%E7%95%A5%E7%9A%84COW"><span class="nav-number">2.</span> <span class="nav-text">Copy-on-Write模式：不是延时策略的COW</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Copy-on-Write-%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%BA%94%E7%94%A8%E9%A2%86%E5%9F%9F"><span class="nav-number">2.1.</span> <span class="nav-text">Copy-on-Write 模式的应用领域</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E4%B8%AA%E7%9C%9F%E5%AE%9E%E6%A1%88%E4%BE%8B"><span class="nav-number">2.2.</span> <span class="nav-text">一个真实案例</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E6%9C%AC%E5%9C%B0%E5%AD%98%E5%82%A8%E6%A8%A1%E5%BC%8F%EF%BC%9A%E6%B2%A1%E6%9C%89%E5%85%B1%E4%BA%AB%EF%BC%8C%E5%B0%B1%E6%B2%A1%E6%9C%89%E4%BC%A4%E5%AE%B3"><span class="nav-number">3.</span> <span class="nav-text">线程本地存储模式：没有共享，就没有伤害</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#ThreadLocal-%E7%9A%84%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95"><span class="nav-number">3.1.</span> <span class="nav-text">ThreadLocal 的使用方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ThreadLocal-%E7%9A%84%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86"><span class="nav-number">3.2.</span> <span class="nav-text">ThreadLocal 的工作原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ThreadLocal-%E4%B8%8E%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2"><span class="nav-number">3.3.</span> <span class="nav-text">ThreadLocal 与内存泄露</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#InheritableThreadLocal-%E4%B8%8E%E7%BB%A7%E6%89%BF%E6%80%A7"><span class="nav-number">3.4.</span> <span class="nav-text">InheritableThreadLocal 与继承性</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Guarded-Suspension%E6%A8%A1%E5%BC%8F%EF%BC%9A%E7%AD%89%E5%BE%85%E5%94%A4%E9%86%92%E6%9C%BA%E5%88%B6%E7%9A%84%E8%A7%84%E8%8C%83%E5%AE%9E%E7%8E%B0"><span class="nav-number">4.</span> <span class="nav-text">Guarded Suspension模式：等待唤醒机制的规范实现</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Guarded-Suspension-%E6%A8%A1%E5%BC%8F"><span class="nav-number">4.1.</span> <span class="nav-text">Guarded Suspension 模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%A9%E5%B1%95-Guarded-Suspension-%E6%A8%A1%E5%BC%8F"><span class="nav-number">4.2.</span> <span class="nav-text">扩展 Guarded Suspension 模式</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Balking%E6%A8%A1%E5%BC%8F%EF%BC%9A%E5%86%8D%E8%B0%88%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8%E7%9A%84%E5%8D%95%E4%BE%8B%E6%A8%A1%E5%BC%8F"><span class="nav-number">5.</span> <span class="nav-text">Balking模式：再谈线程安全的单例模式</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Balking-%E6%A8%A1%E5%BC%8F%E7%9A%84%E7%BB%8F%E5%85%B8%E5%AE%9E%E7%8E%B0"><span class="nav-number">5.1.</span> <span class="nav-text">Balking 模式的经典实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%94%A8-volatile-%E5%AE%9E%E7%8E%B0-Balking-%E6%A8%A1%E5%BC%8F"><span class="nav-number">5.2.</span> <span class="nav-text">用 volatile 实现 Balking 模式</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Thread-Per-Message%E6%A8%A1%E5%BC%8F%EF%BC%9A%E6%9C%80%E7%AE%80%E5%8D%95%E5%AE%9E%E7%94%A8%E7%9A%84%E5%88%86%E5%B7%A5%E6%96%B9%E6%B3%95"><span class="nav-number">6.</span> <span class="nav-text">Thread-Per-Message模式：最简单实用的分工方法</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E7%90%86%E8%A7%A3-Thread-Per-Message-%E6%A8%A1%E5%BC%8F"><span class="nav-number">6.1.</span> <span class="nav-text">如何理解 Thread-Per-Message 模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%94%A8-Thread-%E5%AE%9E%E7%8E%B0-Thread-Per-Message-%E6%A8%A1%E5%BC%8F"><span class="nav-number">6.2.</span> <span class="nav-text">用 Thread 实现 Thread-Per-Message 模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%94%A8-Fiber-%E5%AE%9E%E7%8E%B0-Thread-Per-Message-%E6%A8%A1%E5%BC%8F"><span class="nav-number">6.3.</span> <span class="nav-text">用 Fiber 实现 Thread-Per-Message 模式</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Worker-Thread%E6%A8%A1%E5%BC%8F%EF%BC%9A%E5%A6%82%E4%BD%95%E9%81%BF%E5%85%8D%E9%87%8D%E5%A4%8D%E5%88%9B%E5%BB%BA%E7%BA%BF%E7%A8%8B%EF%BC%9F"><span class="nav-number">7.</span> <span class="nav-text">Worker Thread模式：如何避免重复创建线程？</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Worker-Thread-%E6%A8%A1%E5%BC%8F%E5%8F%8A%E5%85%B6%E5%AE%9E%E7%8E%B0"><span class="nav-number">7.1.</span> <span class="nav-text">Worker Thread 模式及其实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%AD%A3%E7%A1%AE%E5%9C%B0%E5%88%9B%E5%BB%BA%E7%BA%BF%E7%A8%8B%E6%B1%A0"><span class="nav-number">7.2.</span> <span class="nav-text">正确地创建线程池</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%81%BF%E5%85%8D%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81"><span class="nav-number">7.3.</span> <span class="nav-text">避免线程死锁</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%A4%E9%98%B6%E6%AE%B5%E7%BB%88%E6%AD%A2%E6%A8%A1%E5%BC%8F%EF%BC%9A%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E5%9C%B0%E7%BB%88%E6%AD%A2%E7%BA%BF%E7%A8%8B%EF%BC%9F"><span class="nav-number">8.</span> <span class="nav-text">两阶段终止模式：如何优雅地终止线程？</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E7%90%86%E8%A7%A3%E4%B8%A4%E9%98%B6%E6%AE%B5%E7%BB%88%E6%AD%A2%E6%A8%A1%E5%BC%8F"><span class="nav-number">8.1.</span> <span class="nav-text">如何理解两阶段终止模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%94%A8%E4%B8%A4%E9%98%B6%E6%AE%B5%E7%BB%88%E6%AD%A2%E6%A8%A1%E5%BC%8F%E7%BB%88%E6%AD%A2%E7%9B%91%E6%8E%A7%E6%93%8D%E4%BD%9C"><span class="nav-number">8.2.</span> <span class="nav-text">用两阶段终止模式终止监控操作</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E5%9C%B0%E7%BB%88%E6%AD%A2%E7%BA%BF%E7%A8%8B%E6%B1%A0"><span class="nav-number">8.3.</span> <span class="nav-text">如何优雅地终止线程池</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%94%9F%E4%BA%A7%E8%80%85-%E6%B6%88%E8%B4%B9%E8%80%85%E6%A8%A1%E5%BC%8F%EF%BC%9A%E7%94%A8%E6%B5%81%E6%B0%B4%E7%BA%BF%E6%80%9D%E6%83%B3%E6%8F%90%E9%AB%98%E6%95%88%E7%8E%87"><span class="nav-number">9.</span> <span class="nav-text">生产者-消费者模式：用流水线思想提高效率</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%94%9F%E4%BA%A7%E8%80%85-%E6%B6%88%E8%B4%B9%E8%80%85%E6%A8%A1%E5%BC%8F%E7%9A%84%E4%BC%98%E7%82%B9"><span class="nav-number">9.1.</span> <span class="nav-text">生产者 - 消费者模式的优点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%94%AF%E6%8C%81%E6%89%B9%E9%87%8F%E6%89%A7%E8%A1%8C%E4%BB%A5%E6%8F%90%E5%8D%87%E6%80%A7%E8%83%BD"><span class="nav-number">9.2.</span> <span class="nav-text">支持批量执行以提升性能</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%94%AF%E6%8C%81%E5%88%86%E9%98%B6%E6%AE%B5%E6%8F%90%E4%BA%A4%E4%BB%A5%E6%8F%90%E5%8D%87%E6%80%A7%E8%83%BD"><span class="nav-number">9.3.</span> <span class="nav-text">支持分阶段提交以提升性能</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="EdwardLee50"
+      src="/EdwardLee50/EdwardLee50.github.io/images/avatar.png">
+  <p class="site-author-name" itemprop="name">EdwardLee50</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/EdwardLee50/EdwardLee50.github.io/archives/">
+        
+          <span class="site-state-item-count">9</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/EdwardLee50/EdwardLee50.github.io/categories/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/EdwardLee50/EdwardLee50.github.io/tags/">
+          
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="mailto:EdwardLee50@163.com" title="E-Mail → mailto:EdwardLee50@163.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">EdwardLee50</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/EdwardLee50/EdwardLee50.github.io/lib/anime.min.js"></script>
+  <script src="/EdwardLee50/EdwardLee50.github.io/lib/velocity/velocity.min.js"></script>
+  <script src="/EdwardLee50/EdwardLee50.github.io/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/EdwardLee50/EdwardLee50.github.io/js/utils.js"></script>
+
+<script src="/EdwardLee50/EdwardLee50.github.io/js/motion.js"></script>
+
+
+<script src="/EdwardLee50/EdwardLee50.github.io/js/schemes/pisces.js"></script>
+
+
+<script src="/EdwardLee50/EdwardLee50.github.io/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
