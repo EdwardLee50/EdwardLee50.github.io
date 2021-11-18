@@ -5,25 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
 <meta name="theme-color" content="#222">
 <meta name="generator" content="Hexo 5.4.0">
-  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
-  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="apple-touch-icon" sizes="180x180" href="/EdwardLee50.github.io/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/EdwardLee50.github.io/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/EdwardLee50.github.io/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/EdwardLee50.github.io/images/logo.svg" color="#222">
 
-<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="/EdwardLee50.github.io/css/main.css">
 
 
-<link rel="stylesheet" href="lib/font-awesome/css/all.min.css">
+<link rel="stylesheet" href="/EdwardLee50.github.io/lib/font-awesome/css/all.min.css">
 
 <script id="hexo-configurations">
     var NexT = window.NexT || {};
-    var CONFIG = {"hostname":"https:/EdwardLee50.github.io/EdwardLee50.github.io","root":"/EdwardLee50.github.io/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+    var CONFIG = {"hostname":"edwardlee50.github.io","root":"/EdwardLee50.github.io/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
   <meta name="description" content="二分查找的边界判断是做该类题目的难点。当在网上进行检索后，发现while循环内有多种可能（取不取等号），left和right（或low和high）也有多种可能（有时候直接为mid，有时候-1）。可能由于大家认为二分查找过于基础，大部分的文章更多的都是直接给出一个模板或是既成的代码，看完后，对于边界条件的撰写，自己仍是云里雾里。 受到知乎回答（特别是labuladong）和详解二分查找算法的启发，结">
 <meta property="og:type" content="article">
 <meta property="og:title" content="对于二分法的一点浅薄思考与总结">
-<meta property="og:url" content="2019/11/15/%E5%85%B3%E4%BA%8E%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE%E7%9A%84%E4%B8%80%E7%82%B9%E6%B5%85%E8%96%84%E6%80%9D%E8%80%83%E4%B8%8E%E6%80%BB%E7%BB%93/index.html">
+<meta property="og:url" content="https://edwardlee50.github.io/EdwardLee50.github.io/2019/11/15/%E5%85%B3%E4%BA%8E%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE%E7%9A%84%E4%B8%80%E7%82%B9%E6%B5%85%E8%96%84%E6%80%9D%E8%80%83%E4%B8%8E%E6%80%BB%E7%BB%93/index.html">
 <meta property="og:site_name" content="EdwardLee50&#39;s Blog">
 <meta property="og:description" content="二分查找的边界判断是做该类题目的难点。当在网上进行检索后，发现while循环内有多种可能（取不取等号），left和right（或low和high）也有多种可能（有时候直接为mid，有时候-1）。可能由于大家认为二分查找过于基础，大部分的文章更多的都是直接给出一个模板或是既成的代码，看完后，对于边界条件的撰写，自己仍是云里雾里。 受到知乎回答（特别是labuladong）和详解二分查找算法的启发，结">
 <meta property="og:locale" content="zh_CN">
@@ -33,7 +33,7 @@
 <meta property="article:tag" content="二分查找">
 <meta name="twitter:card" content="summary">
 
-<link rel="canonical" href="2019/11/15/关于二分查找的一点浅薄思考与总结/">
+<link rel="canonical" href="https://edwardlee50.github.io/EdwardLee50.github.io/2019/11/15/%E5%85%B3%E4%BA%8E%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE%E7%9A%84%E4%B8%80%E7%82%B9%E6%B5%85%E8%96%84%E6%80%9D%E8%80%83%E4%B8%8E%E6%80%BB%E7%BB%93/">
 
 
 <script id="page-configurations">
@@ -115,22 +115,22 @@
   <ul id="menu" class="main-menu menu">
         <li class="menu-item menu-item-home">
 
-    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+    <a href="/EdwardLee50.github.io/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
 
   </li>
         <li class="menu-item menu-item-tags">
 
-    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+    <a href="/EdwardLee50.github.io/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
 
   </li>
         <li class="menu-item menu-item-categories">
 
-    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+    <a href="/EdwardLee50.github.io/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
 
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+    <a href="/EdwardLee50.github.io/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
 
   </li>
   </ul>
@@ -161,10 +161,10 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="2019/11/15/关于二分查找的一点浅薄思考与总结/">
+    <link itemprop="mainEntityOfPage" href="https://edwardlee50.github.io/EdwardLee50.github.io/2019/11/15/%E5%85%B3%E4%BA%8E%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE%E7%9A%84%E4%B8%80%E7%82%B9%E6%B5%85%E8%96%84%E6%80%9D%E8%80%83%E4%B8%8E%E6%80%BB%E7%BB%93/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="image" content="/EdwardLee50.github.io/images/avatar.png">
       <meta itemprop="name" content="EdwardLee50">
       <meta itemprop="description" content="">
     </span>
@@ -196,7 +196,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="categories/算法/" itemprop="url" rel="index"><span itemprop="name">算法</span></a>
+                  <a href="/EdwardLee50.github.io/categories/%E7%AE%97%E6%B3%95/" itemprop="url" rel="index"><span itemprop="name">算法</span></a>
                 </span>
             </span>
 
@@ -483,7 +483,7 @@
 
       <footer class="post-footer">
           <div class="post-tags">
-              <a href="tags/二分查找/" rel="tag"># 二分查找</a>
+              <a href="/EdwardLee50.github.io/tags/%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE/" rel="tag"># 二分查找</a>
           </div>
 
         
@@ -493,7 +493,7 @@
     <div class="post-nav">
       <div class="post-nav-item"></div>
       <div class="post-nav-item">
-    <a href="2019/11/15/关于Java中数组扩容的简述/" rel="next" title="关于java中数组扩容的简述">
+    <a href="/EdwardLee50.github.io/2019/11/15/%E5%85%B3%E4%BA%8EJava%E4%B8%AD%E6%95%B0%E7%BB%84%E6%89%A9%E5%AE%B9%E7%9A%84%E7%AE%80%E8%BF%B0/" rel="next" title="关于java中数组扩容的简述">
       关于java中数组扩容的简述 <i class="fa fa-chevron-right"></i>
     </a></div>
     </div>
@@ -561,27 +561,27 @@
       <div class="site-overview-wrap sidebar-panel">
         <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <img class="site-author-image" itemprop="image" alt="EdwardLee50"
-      src="/images/avatar.png">
+      src="/EdwardLee50.github.io/images/avatar.png">
   <p class="site-author-name" itemprop="name">EdwardLee50</p>
   <div class="site-description" itemprop="description"></div>
 </div>
 <div class="site-state-wrap motion-element">
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
-          <a href="/archives/">
+          <a href="/EdwardLee50.github.io/archives/">
         
           <span class="site-state-item-count">9</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
-            <a href="/categories/">
+            <a href="/EdwardLee50.github.io/categories/">
           
         <span class="site-state-item-count">6</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
-            <a href="/tags/">
+            <a href="/EdwardLee50.github.io/tags/">
           
         <span class="site-state-item-count">4</span>
         <span class="site-state-item-name">标签</span></a>
@@ -638,19 +638,19 @@
   </div>
 
   
-  <script src="lib/anime.min.js"></script>
-  <script src="lib/velocity/velocity.min.js"></script>
-  <script src="lib/velocity/velocity.ui.min.js"></script>
+  <script src="/EdwardLee50.github.io/lib/anime.min.js"></script>
+  <script src="/EdwardLee50.github.io/lib/velocity/velocity.min.js"></script>
+  <script src="/EdwardLee50.github.io/lib/velocity/velocity.ui.min.js"></script>
 
-<script src="js/utils.js"></script>
+<script src="/EdwardLee50.github.io/js/utils.js"></script>
 
-<script src="js/motion.js"></script>
-
-
-<script src="js/schemes/pisces.js"></script>
+<script src="/EdwardLee50.github.io/js/motion.js"></script>
 
 
-<script src="js/next-boot.js"></script>
+<script src="/EdwardLee50.github.io/js/schemes/pisces.js"></script>
+
+
+<script src="/EdwardLee50.github.io/js/next-boot.js"></script>
 
 
 
